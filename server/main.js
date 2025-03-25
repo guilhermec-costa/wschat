@@ -32,7 +32,7 @@ wsSocketServer.on("connection", (ws, req) => {
     const clientWsId = stringifiedData.substring(
       stringifiedData.lastIndexOf("\n") + 1
     );
-    ws.send(`SocketId: ${clientWsId}`);
+    ws.send(`SocketId: ${clientWsId} : Number: ${Math.random()}`);
   });
 
   setInterval(() => {
