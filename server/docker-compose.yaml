@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  ollama:
+    build:
+      context: ./ollama-config
+      dockerfile: Dockerfile
+    container_name: ollama_server
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_MODE=local
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  ollama_data:

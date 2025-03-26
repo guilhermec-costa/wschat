@@ -1,34 +1,28 @@
-import React from "react";
+import React, { FormEvent } from "react";
+import useSocketLogic from "../hooks/useSocketLogic";
 
 export interface ChatInstanceProps {
   name: string;
-  setSelectedChats: React.Dispatch<React.SetStateAction<never[]>>;
+  setSelectedChats: React.Dispatch<React.SetStateAction<HTMLInputElement>>;
 }
 
 export default function ChatInstance({
   name,
   setSelectedChats,
 }: ChatInstanceProps) {
+  const [serverMessages, setServerMessages] = React.useState<string[]>([]);
+  const socketLogic = useSocketLogic({
+    setServerMessages,
+  });
   const currentMessageRef = React.useRef<HTMLInputElement>(null);
   const [checked, setChecked] = React.useState<boolean>(false);
-  const socket = React.useMemo(() => {
-    return new WebSocket("ws://localhost:8085");
-  }, []);
 
-  const [serverMessages, setServerMessages] = React.useState<string[]>([]);
-
-  function sendMessage() {
+  function sendMessage(e: FormEvent) {
+    e.preventDefault();
     if (currentMessageRef.current) {
-      socket.send(currentMessageRef.current?.value);
+      socketLogic.socket.send(currentMessageRef.current?.value);
     }
   }
-  socket.onopen = function (e) {
-    console.log("Socket open");
-  };
-
-  socket.onmessage = function (e) {
-    setServerMessages((prev) => [...prev, e.data]);
-  };
 
   function handleChatSelection() {
     setChecked((prev) => {
@@ -47,22 +41,31 @@ export default function ChatInstance({
           type="checkbox"
           onChange={handleChatSelection}
         />
+        Socket State: {socketLogic.isSocketActive ? "Active" : "Inactive"}
       </div>
 
-      <div className="mt-3 flex gap-2">
-        <input
-          ref={currentMessageRef}
-          type="text"
-          placeholder="Type a message..."
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={sendMessage}
-          className="px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition"
-        >
-          Send
-        </button>
-      </div>
+      <form action="">
+        <div className="mt-3 flex gap-2">
+          <input
+            ref={currentMessageRef}
+            disabled={!socketLogic.isSocketActive}
+            type="text"
+            placeholder="Type a message..."
+            className={`flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              socketLogic.isSocketActive
+                ? "cursor-pointer"
+                : "cursor-not-allowed"
+            }`}
+          />
+          <button
+            type="submit"
+            onClick={sendMessage}
+            className="px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition"
+          >
+            Send
+          </button>
+        </div>
+      </form>
 
       <h3 className="mt-4 font-bold text-gray-700">Server messages</h3>
       <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">

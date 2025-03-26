@@ -1,38 +1,28 @@
 const ws = require("ws");
 const { v4: uuidV4 } = require("uuid");
+const { OllamaClient } = require("./ollama-client");
 
 const wsSocketServer = new ws.Server({
   port: 8085,
 });
 
-const socketsMap = {};
-
-/**
- *
- * @param {ws.WebSocket} socket
- * @returns {string} id - id of the created socket
- */
-function registerSocket(socket) {
-  const socketId = uuidV4();
-  socketsMap[socketId] = socket;
-  return socketId;
-}
-
-wsSocketServer.on("open", () => {
-  console.log("Connected to server");
-});
+const client = new OllamaClient();
 
 wsSocketServer.on("connection", (ws, req) => {
   console.log(`Socket connected at ${new Date().toString()}`);
-  const sId = registerSocket(ws);
-  ws.send(`Comunication Socket created: Id: ${sId}`);
+  ws.on("message", async (data) => {
+    const stringifiedMessage = data.toString();
 
-  ws.on("message", (data) => {
-    const stringifiedData = data.toString();
-    const clientWsId = stringifiedData.substring(
-      stringifiedData.lastIndexOf("\n") + 1
-    );
-    ws.send(`SocketId: ${clientWsId} : Number: ${Math.random()}`);
+    const response = await client.client.chat({
+      model: "deepseek-r1:1.5b",
+      messages: [{ role: "user", content: stringifiedMessage }],
+    });
+    for (const char of response.message.content) {
+      if (ws.readyState === ws.OPEN) {
+        ws.send(char);
+        await new Promise((res) => setTimeout(res, 10)); // Simula digitação
+      }
+    }
   });
 
   setInterval(() => {
